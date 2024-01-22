@@ -1,4 +1,4 @@
-module github.com/Shravan-1908/gap
+module github.com/shravanasati/gap
 
 go 1.17
 
