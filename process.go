@@ -27,7 +27,7 @@ func process(in *chan string, out *chan *searchResult, searchTerm string) {
 			count := 0
 			for i, line := range data {
 				if bytes.Contains(line, toSearch) {
-					*out <- &searchResult{filename: entry, lineNumber: i, text: string(line), finished: false}
+					*out <- &searchResult{filename: entry, lineNumber: i + 1, text: string(line), finished: false}
 					count++
 				}
 			}
