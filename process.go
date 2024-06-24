@@ -8,8 +8,10 @@ import (
 	"sync"
 )
 
-func process(in *chan string, out *chan *result) {
+func process(in *chan string, out *chan *result, searchTerm string) {
 	wg := new(sync.WaitGroup)
+	toSearch := []byte(searchTerm)
+	newLineSep := []byte("\n")
 
 	for entry := range *in {
 		// fmt.Println(entry)
@@ -18,11 +20,12 @@ func process(in *chan string, out *chan *result) {
 			content, err := ioutil.ReadFile(entry)
 			if err != nil {
 				log.Fatal("unable to read file", err)
+				return
 			}
 
-			data := bytes.Split(content, []byte("\n"))
+			data := bytes.Split(content, newLineSep)
 			for i, line := range data {
-				if bytes.Contains(line, []byte("package")) {
+				if bytes.Contains(line, toSearch) {
 					*out <- &result{entry, i, string(line)}
 				}
 			}
@@ -32,4 +35,9 @@ func process(in *chan string, out *chan *result) {
 	}
 
 	wg.Wait()
+	gState.Lock()
+	defer gState.Unlock()
+	if !gState.resultChClosed {
+		close(*out)
+	}
 }

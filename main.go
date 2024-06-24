@@ -1,44 +1,43 @@
 package main
 
 import (
-	"fmt"
-	// "sync"
+	"log"
+	"os"
+	"sync"
 )
 
+type globalState struct {
+	resultChClosed bool
+	sync.Mutex
+}
+
+var gState = globalState{resultChClosed: false}
+
 func main() {
-	processor := make(chan string, 10)
-	resultCh := make(chan *result, 10)
+	if len(os.Args) < 2 {
+		log.Fatal("require a search term")
+		return
+	}
+	searchTerm := os.Args[1]
 
-	go resultPrinter(&resultCh)
-	go process(&processor, &resultCh)
+	processor := make(chan string)
+	resultCh := make(chan *result)
+	var wg sync.WaitGroup
 
-	walk(`C:/Users/LENOVO/Documents/binod`, &processor)
-	fmt.Scanln()
+	wg.Add(1)
+	go func() {
+		resultPrinter(&resultCh)
+		wg.Done()
+	}()
 
-	// wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		process(&processor, &resultCh, searchTerm)
+		wg.Done()
+	}()
 
-	// wg.Add(3)
-
-	// go func() {
-	// 	process(&processor, &resultCh)
-	// 	fmt.Println("closing results")
-	// 	close(resultCh)
-	// 	wg.Done()
-	// }()
-
-	// go func() {
-	// 	resultPrinter(&resultCh)
-	// 	wg.Done()
-	// }()
-
-	// go func() {
-	// 	walk(`C:/Users/LENOVO/Documents/binod`, &processor)
-	// 	fmt.Println("closing processor")
-	// 	close(processor)
-	// 	wg.Done()
-	// }()
-
-
-
-	// wg.Wait()
+	if err := walk(`.`, &processor); err != nil {
+		log.Fatal(err)
+	}
+	wg.Wait()
 }
