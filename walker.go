@@ -44,12 +44,12 @@ func walk(dir string, processor *chan string) error {
             return nil
         }
 		if err != nil {
-            log.Fatal("cant get file info: " + f.Name())
-			return err
+            log.Fatal("cant get file info:", f.Name(), err.Error())
+			return nil
 		}
         isBinary, err := isBinaryFile(f.Name())
         if err != nil {
-            return err
+            return nil
         }
 		if !isBinary {
 			*processor <- path

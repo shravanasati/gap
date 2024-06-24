@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-func process(in *chan string, out *chan *result, searchTerm string) {
+func process(in *chan string, out *chan *searchResult, searchTerm string) {
 	wg := new(sync.WaitGroup)
 	toSearch := []byte(searchTerm)
 	newLineSep := []byte("\n")
@@ -24,10 +24,17 @@ func process(in *chan string, out *chan *result, searchTerm string) {
 			}
 
 			data := bytes.Split(content, newLineSep)
+			count := 0
 			for i, line := range data {
 				if bytes.Contains(line, toSearch) {
-					*out <- &result{entry, i, string(line)}
+					*out <- &searchResult{filename: entry, lineNumber: i, text: string(line), finished: false}
+					count++
 				}
+			}
+
+			if count > 0 {
+				// ṇotify that the file is finished reading
+				*out <- &searchResult{filename: entry, finished: true}
 			}
 
 			wg.Done()

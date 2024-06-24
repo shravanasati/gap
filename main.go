@@ -21,7 +21,7 @@ func main() {
 	searchTerm := os.Args[1]
 
 	processor := make(chan string)
-	resultCh := make(chan *result)
+	resultCh := make(chan *searchResult)
 	var wg sync.WaitGroup
 
 	wg.Add(1)
