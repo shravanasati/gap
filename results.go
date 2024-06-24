@@ -16,7 +16,7 @@ type searchResult struct {
 	filename   string
 	lineNumber int
 	text       string
-	finished bool
+	finished   bool
 }
 
 // result.String() returns a string representation of the result.
