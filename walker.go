@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/charlievieth/fastwalk"
+	"github.com/shravanasati/gap/gitignore"
 )
 
 func isBinaryFile(filename string) (bool, error) {
@@ -35,9 +36,23 @@ func isBinaryFile(filename string) (bool, error) {
 }
 
 func walk(dir string, processor *chan string) error {
+	matcher, err := gitignore.NewGitignoreMatcher().FromFile("./.gitignore")
+	if err != nil {
+		log.Println("gitignore not found", err)
+		// if there is some error, we can let it pass
+		// but the matcher would be nil
+		// so setting it to a empty matcher
+		matcher = gitignore.NewGitignoreMatcher()
+	}
+
 	visit := func(path string, f fs.DirEntry, err error) error {
-		if f.IsDir() && filepath.Base(path) == ".git" {
+		if f.IsDir() && (filepath.Base(path) == ".git" || matcher.IsIgnored(path)) {
 			return fastwalk.SkipDir
+		}
+
+		if matcher.IsIgnored(path) {
+			// no need to have various checks if the file is ignored
+			return nil
 		}
 
 		info, err := f.Info()
@@ -59,7 +74,7 @@ func walk(dir string, processor *chan string) error {
 		return nil
 	}
 
-	err := fastwalk.Walk(&fastwalk.DefaultConfig, dir, visit)
+	err = fastwalk.Walk(&fastwalk.DefaultConfig, dir, visit)
 	close(*processor)
 	return err
 }

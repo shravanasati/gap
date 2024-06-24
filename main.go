@@ -9,6 +9,7 @@ import (
 
 func main() {
 	// todo add ignore matcher
+	// todo add regex feature
 	if len(os.Args) < 2 {
 		log.Fatal("require a search term")
 		return
