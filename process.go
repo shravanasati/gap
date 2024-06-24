@@ -41,11 +41,4 @@ func process(in *chan string, out *chan *searchResult, searchTerm string) {
 	}
 
 	wg.Wait()
-	// todo move this logic to a processManager
-	gState.Lock()
-	defer gState.Unlock()
-	if !gState.resultChClosed {
-		close(*out)
-		gState.resultChClosed = true
-	}
 }

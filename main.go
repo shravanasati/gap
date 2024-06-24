@@ -3,17 +3,9 @@ package main
 import (
 	"log"
 	"os"
-
-	// "runtime"
+	"runtime"
 	"sync"
 )
-
-type globalState struct {
-	resultChClosed bool
-	sync.Mutex
-}
-
-var gState = globalState{resultChClosed: false}
 
 func main() {
 	// todo add ignore matcher
@@ -33,15 +25,28 @@ func main() {
 		wg.Done()
 	}()
 
-	// nProcs := runtime.GOMAXPROCS(-1)
-	for range 1 {
-		wg.Add(1)
+	nProcs := runtime.GOMAXPROCS(-1)
+	// the process waitgroup is only used to orchestrate the processor goroutines
+	var processWg sync.WaitGroup
+	for range nProcs {
+		processWg.Add(1)
 		go func() {
-			// these goroutines will 
+			// these goroutines will deadlock when the channel is not closed
 			process(&processor, &resultCh, searchTerm)
-			wg.Done()
+			processWg.Done()
 		}()
 	}
+
+	// this goroutine will wait for all processors to finish
+	// once that's done, it will close the result channel so that
+	// result printer can stop too
+	// wg waitgroup only handles resultPrinter and the below goroutine
+	wg.Add(1)
+	go func() {
+		processWg.Wait()
+		close(resultCh)
+		wg.Done()
+	}()
 
 	if err := walk(`.`, &processor); err != nil {
 		log.Fatal(err)

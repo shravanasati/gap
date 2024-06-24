@@ -22,7 +22,7 @@ func isBinaryFile(filename string) (bool, error) {
 	buf := make([]byte, 512)
 	n, err := file.Read(buf)
 	if err != nil && err != io.EOF {
-        log.Fatal("cannot read file:", filename, err)
+		log.Fatal("cannot read file:", filename, err)
 		return false, err
 	}
 
