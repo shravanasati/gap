@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"os"
+
+	// "runtime"
 	"sync"
 )
 
@@ -14,6 +16,7 @@ type globalState struct {
 var gState = globalState{resultChClosed: false}
 
 func main() {
+	// todo add ignore matcher
 	if len(os.Args) < 2 {
 		log.Fatal("require a search term")
 		return
@@ -30,11 +33,15 @@ func main() {
 		wg.Done()
 	}()
 
-	wg.Add(1)
-	go func() {
-		process(&processor, &resultCh, searchTerm)
-		wg.Done()
-	}()
+	// nProcs := runtime.GOMAXPROCS(-1)
+	for range 1 {
+		wg.Add(1)
+		go func() {
+			// these goroutines will 
+			process(&processor, &resultCh, searchTerm)
+			wg.Done()
+		}()
+	}
 
 	if err := walk(`.`, &processor); err != nil {
 		log.Fatal(err)

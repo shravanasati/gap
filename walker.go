@@ -6,9 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"net/http"
+	"unicode"
 
 	"github.com/charlievieth/fastwalk"
 )
@@ -16,20 +14,24 @@ import (
 func isBinaryFile(filename string) (bool, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Fatal("cant open file: " + filename)
+		log.Fatal("cant open file: ", filename, err)
 		return false, err
 	}
 	defer file.Close()
 
-	buffer := make([]byte, 512)
-	if _, err = file.Read(buffer); err != nil && err != io.EOF {
-		log.Fatal("cant read file: ", filename)
+	buf := make([]byte, 512)
+	n, err := file.Read(buf)
+	if err != nil && err != io.EOF {
+        log.Fatal("cannot read file:", filename, err)
 		return false, err
 	}
 
-	contentType := http.DetectContentType(buffer)
-
-	return !strings.HasPrefix(contentType, "text/"), nil
+	for i := 0; i < n; i++ {
+		if !unicode.IsPrint(rune(buf[i])) && !unicode.IsSpace(rune(buf[i])) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func walk(dir string, processor *chan string) error {
@@ -39,14 +41,15 @@ func walk(dir string, processor *chan string) error {
 		}
 
 		info, err := f.Info()
-		if !info.Mode().IsRegular() {
-			return nil
-		}
 		if err != nil {
 			log.Fatal("cant get file info:", f.Name(), err.Error())
 			return nil
 		}
-		isBinary, err := isBinaryFile(f.Name())
+		if !info.Mode().IsRegular() {
+			return nil
+		}
+
+		isBinary, err := isBinaryFile(filepath.Join(".", path))
 		if err != nil {
 			return nil
 		}

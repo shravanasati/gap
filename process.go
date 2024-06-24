@@ -14,7 +14,6 @@ func process(in *chan string, out *chan *searchResult, searchTerm string) {
 	newLineSep := []byte("\n")
 
 	for entry := range *in {
-		// fmt.Println(entry)
 		wg.Add(1)
 		go func(entry string) {
 			content, err := ioutil.ReadFile(entry)
@@ -42,9 +41,11 @@ func process(in *chan string, out *chan *searchResult, searchTerm string) {
 	}
 
 	wg.Wait()
+	// todo move this logic to a processManager
 	gState.Lock()
 	defer gState.Unlock()
 	if !gState.resultChClosed {
 		close(*out)
+		gState.resultChClosed = true
 	}
 }
