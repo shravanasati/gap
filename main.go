@@ -23,9 +23,14 @@ type processorConfig struct {
 	regex        *regexp.Regexp
 }
 
+type walkerConfig struct {
+	dir            string
+	followSymlinks bool
+}
+
 func main() {
 	// todo add ignore matcher
-	// todo add regex feature
+	// todo read from stdin
 
 	app := &cli.App{
 		Name:    NAME,
@@ -54,15 +59,82 @@ func main() {
 				Value:   false,
 				Usage:   "Whether the pattern is a regular expression.",
 			},
+			&cli.BoolFlag{
+				Name:    "smart-casing", // todo
+				Aliases: []string{"S"},
+				Value:   true,
+				Usage:   "Whether to use smart-casing. gap will search case-insensitively if all the terms are in lower case. Overrides other case-sensitivity flags.",
+			},
+			&cli.BoolFlag{
+				Name:    "insensitive", // todo
+				Aliases: []string{"i"},
+				Value:   false,
+				Usage:   "Whether to search case-insensitively",
+			},
+			&cli.BoolFlag{
+				Name:    "sensitive", // todo
+				Aliases: []string{"c"},
+				Value:   false,
+				Usage:   "Whether to search case-sensitively",
+			},
+			&cli.BoolFlag{
+				Name:  "stats", // todo
+				Value: false,
+				Usage: "Show statistics about the search.",
+			},
+			&cli.BoolFlag{
+				Name:    "files-with-matches", // todo
+				Aliases: []string{"f"},
+				Value:   false,
+				Usage:   "Print paths with atleast one match.",
+			},
+			&cli.BoolFlag{
+				Name:    "files-without-matches", // todo
+				Aliases: []string{"F"},
+				Value:   false,
+				Usage:   "Print paths with zero matches.",
+			},
+			&cli.BoolFlag{
+				Name:    "line-number", // todo
+				Aliases: []string{"n"},
+				Value:   true,
+				Usage:   "Print line numbers where matches occur.",
+			},
+			&cli.BoolFlag{
+				Name:    "no-line-number", // todo
+				Aliases: []string{"N"},
+				Value:   false,
+				Usage:   "Don't print line numbers where matches occur.",
+			},
+			&cli.BoolFlag{
+				Name:    "follow",
+				Aliases: []string{"L"},
+				Value:   false,
+				Usage:   "Follow symbolic links.",
+			},
+			&cli.StringSliceFlag{
+				Name:    "glob", // todo
+				Aliases: []string{"g"},
+				Usage:   "Glob patterns for files to search.",
+			},
+			&cli.StringSliceFlag{
+				Name:    "ignore-glob", // todo
+				Aliases: []string{"G"},
+				Usage:   "Glob patterns for files to ignore.",
+			},
 		},
 		Action: func(cCtx *cli.Context) error {
 			searchPattern := cCtx.Args().Get(0)
 			if searchPattern == "" {
-				return errors.New("require a search pattern. do `gap -h` for help.")
+				return errors.New("require a search pattern. do `gap -h` for help")
 			}
 			dir := cCtx.Args().Get(1)
 			if dir == "" {
 				dir = "."
+			}
+			walkConfig := &walkerConfig{
+				dir: dir,
+				followSymlinks: cCtx.Bool("follow"),
 			}
 
 			regexEnabled := cCtx.Bool("regex")
@@ -90,14 +162,13 @@ func main() {
 
 			nProcs := cCtx.Uint("workers")
 			if nProcs == 0 {
-				nProcs = uint(runtime.NumCPU())
+				nProcs = max(uint(runtime.NumCPU())/4, 1)
 			}
 			// the process waitgroup is only used to orchestrate the processor goroutines
 			var processWg sync.WaitGroup
 			for range nProcs {
 				processWg.Add(1)
 				go func() {
-					// these goroutines will deadlock when the channel is not closed
 					process(&processor, &resultCh, processConfig)
 					processWg.Done()
 				}()
@@ -114,7 +185,7 @@ func main() {
 				wg.Done()
 			}()
 
-			if err := walk(dir, &processor); err != nil {
+			if err := walk(walkConfig, &processor); err != nil {
 				log.Fatal(err)
 			}
 			wg.Wait()

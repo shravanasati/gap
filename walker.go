@@ -42,7 +42,7 @@ func isBinaryFile(filename string) (bool, error) {
 	return false, nil
 }
 
-func walk(dir string, processor *chan string) error {
+func walk(config *walkerConfig, processor *chan string) error {
 	matcher, err := gitignore.NewGitignoreMatcher().FromFile("./.gitignore")
 	if err != nil {
 		log.Println("gitignore not found", err)
@@ -82,7 +82,13 @@ func walk(dir string, processor *chan string) error {
 		return nil
 	}
 
-	err = fastwalk.Walk(&fastwalk.DefaultConfig, dir, visit)
+	err = fastwalk.Walk(
+		&fastwalk.Config{
+			NumWorkers: fastwalk.DefaultNumWorkers(), 
+			Follow: config.followSymlinks,
+		}, 
+		config.dir, visit,
+	)
 	close(*processor)
 	return err
 }
