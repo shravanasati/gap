@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"unicode"
+	// "unicode/utf8"
 
 	"github.com/charlievieth/fastwalk"
 	"github.com/shravanasati/gap/gitignore"
@@ -28,9 +29,15 @@ func isBinaryFile(filename string) (bool, error) {
 	}
 
 	for i := 0; i < n; i++ {
+		// r, size := utf8.DecodeRune(buf[i:])
+		// if r == utf8.RuneError {
+		// 	// Invalid UTF-8 encoding found, assuming binary file
+		// 	return true, nil
+		// }
 		if !unicode.IsPrint(rune(buf[i])) && !unicode.IsSpace(rune(buf[i])) {
 			return true, nil
 		}
+		// i += size
 	}
 	return false, nil
 }
@@ -46,7 +53,8 @@ func walk(dir string, processor *chan string) error {
 	}
 
 	visit := func(path string, f fs.DirEntry, err error) error {
-		if f.IsDir() && (filepath.Base(path) == ".git" || matcher.IsIgnored(path)) {
+		basePath := filepath.Base(path)
+		if f.IsDir() && (basePath == ".git" || matcher.IsIgnored(path)) {
 			return fastwalk.SkipDir
 		}
 
