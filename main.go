@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"runtime"
 	"sync"
 
@@ -15,6 +16,12 @@ const (
 	NAME    = "gap"
 	VERSION = "v0.1.0"
 )
+
+type processorConfig struct {
+	regexEnabled bool
+	pattern      string
+	regex        *regexp.Regexp
+}
 
 func main() {
 	// todo add ignore matcher
@@ -29,23 +36,23 @@ func main() {
 				Email: "dev.shravan@proton.me",
 			},
 		},
-		Usage:     "a *fast* grep like tool",
-		UsageText: "gap is a fast grep like tool. It searches the given regex or literal text and searches it recursively in the given directory, while ignoring hidden files and folders, binary files and obeying the gitignore patterns.",
+		Usage:           "a *fast* grep like tool",
+		UsageText:       "gap is a fast grep like tool. It searches the given regex or literal text and searches it recursively in the given directory, while ignoring hidden files and folders, binary files and obeying the gitignore patterns.",
 		HideHelpCommand: true,
-		ArgsUsage: "PATTERN [PATH]",
+		ArgsUsage:       "PATTERN [PATH]",
 		Flags: []cli.Flag{
 			&cli.UintFlag{
-				Name: "workers",
-				Aliases: []string{"w"},
-				Value: 0,
-				Usage: "Number of parallel workers for processing text.",
+				Name:        "workers",
+				Aliases:     []string{"w"},
+				Value:       0,
+				Usage:       "Number of parallel workers for processing text.",
 				DefaultText: "as many logical cores",
 			},
 			&cli.BoolFlag{
-				Name: "regex",
+				Name:    "regex",
 				Aliases: []string{"x"},
-				Value: false,
-				Usage: "Whether the pattern is a regular expression.",
+				Value:   false,
+				Usage:   "Whether the pattern is a regular expression.",
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
@@ -58,7 +65,18 @@ func main() {
 				dir = "."
 			}
 
-			// regexEnabled := cCtx.Bool("regex")
+			regexEnabled := cCtx.Bool("regex")
+			processConfig := &processorConfig{
+				regexEnabled: regexEnabled,
+				pattern:      searchPattern,
+			}
+			if regexEnabled {
+				re, err := regexp.Compile(searchPattern)
+				if err != nil {
+					return errors.New("unable to compile regex: " + err.Error())
+				}
+				processConfig.regex = re
+			}
 
 			processor := make(chan string)
 			resultCh := make(chan *searchResult)
@@ -80,7 +98,7 @@ func main() {
 				processWg.Add(1)
 				go func() {
 					// these goroutines will deadlock when the channel is not closed
-					process(&processor, &resultCh, searchPattern)
+					process(&processor, &resultCh, processConfig)
 					processWg.Done()
 				}()
 			}

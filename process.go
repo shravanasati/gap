@@ -8,9 +8,11 @@ import (
 	"sync"
 )
 
-func process(in *chan string, out *chan *searchResult, searchTerm string) {
+type searchCallable func([]byte) bool
+
+func process(in *chan string, out *chan *searchResult, config *processorConfig) {
 	wg := new(sync.WaitGroup)
-	toSearch := []byte(searchTerm)
+	toSearch := []byte(config.pattern)
 	newLineSep := []byte("\n")
 
 	for entry := range *in {
@@ -24,8 +26,19 @@ func process(in *chan string, out *chan *searchResult, searchTerm string) {
 
 			data := bytes.Split(content, newLineSep)
 			count := 0
+			var searchMethod searchCallable
+			if config.regexEnabled {
+				searchMethod = func(b []byte) bool {
+					return config.regex.Match(b)
+				}
+			} else {
+				searchMethod = func(b []byte) bool {
+					return bytes.Contains(b, toSearch)
+				}
+
+			}
 			for i, line := range data {
-				if bytes.Contains(line, toSearch) {
+				if searchMethod(line) {
 					*out <- &searchResult{filename: entry, lineNumber: i + 1, text: string(line), finished: false}
 					count++
 				}
