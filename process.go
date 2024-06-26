@@ -46,6 +46,13 @@ func process(in *chan string, out *chan *searchResult, config *processorConfig) 
 				}
 			}
 
+			if config.invertMatch {
+				oldSearchMethod := searchMethod
+				searchMethod = func(b []byte) bool {
+					return !oldSearchMethod(b)
+				}
+			}
+
 			for i, line := range data {
 				if searchMethod(line) {
 					*out <- &searchResult{filename: entry, lineNumber: i + 1, text: string(line), finished: false}

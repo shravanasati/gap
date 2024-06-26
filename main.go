@@ -23,6 +23,7 @@ type processorConfig struct {
 	pattern       string
 	regex         *regexp.Regexp
 	caseSensitive bool
+	invertMatch   bool
 }
 
 type walkerConfig struct {
@@ -71,13 +72,19 @@ func main() {
 				Name:    "insensitive",
 				Aliases: []string{"i"},
 				Value:   false,
-				Usage:   "Whether to search case-insensitively",
+				Usage:   "Whether to search case-insensitively.",
 			},
 			&cli.BoolFlag{
 				Name:    "sensitive",
 				Aliases: []string{"c"},
 				Value:   false,
-				Usage:   "Whether to search case-sensitively",
+				Usage:   "Whether to search case-sensitively.",
+			},
+			&cli.BoolFlag{
+				Name:    "invert-match",
+				Aliases: []string{"V"},
+				Value:   false,
+				Usage:   "Print lines and files where the given pattern doesn't match.",
 			},
 			&cli.BoolFlag{
 				Name:  "stats",
@@ -133,10 +140,12 @@ func main() {
 				followSymlinks: cCtx.Bool("follow"),
 			}
 
+			invertMatch := cCtx.Bool("invert-match")
 			regexEnabled := cCtx.Bool("regex")
 			processConfig := &processorConfig{
 				regexEnabled: regexEnabled,
 				pattern:      searchPattern,
+				invertMatch: invertMatch,
 			}
 			insensitive := cCtx.Bool("insensitive")
 			sensitive := cCtx.Bool("sensitive")
@@ -176,8 +185,8 @@ func main() {
 
 			printConfig := &printerConfig{
 				showLineNumbers: !noLineNumber,
-				countStats: countStats,
-				onlyFiles: filesWithMatches || filesWithoutMatches,
+				countStats:      countStats,
+				onlyFiles:       filesWithMatches || filesWithoutMatches,
 			}
 
 			processor := make(chan string)
