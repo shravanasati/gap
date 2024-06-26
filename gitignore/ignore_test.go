@@ -4,9 +4,9 @@ import "testing"
 
 func TestIgnore(t *testing.T) {
 	patterns := []string{"bin/", "*.out", "venv/", "*.py[co]"}
-	testCases := []struct{
+	testCases := []struct {
 		input string
-		want bool
+		want  bool
 	}{
 		{"./bin/a.exe", true},
 		{"./something/a.out", true},

@@ -41,6 +41,7 @@ type printerConfig struct {
 func main() {
 	// todo add ignore matcher
 	// todo read from stdin
+	// todo add match context
 
 	app := &cli.App{
 		Name:    NAME,
@@ -52,7 +53,7 @@ func main() {
 			},
 		},
 		Usage:           "a *fast* grep like tool",
-		UsageText:       "gap is a fast grep like tool. It searches the given regex or literal text and searches it recursively in the given directory, while ignoring hidden files and folders, binary files and obeying the gitignore patterns. \n$ gap pattern [path] {flags}",
+		UsageText:       "gap is a fast grep like tool. It searches the given regex or literal text and searches it recursively in the given directory, while ignoring hidden files and folders, binary files and obeying the gitignore patterns. \n\nProject Home Page: https://github.com/shravanasati/gap \n\n$ gap pattern [path] {flags}",
 		HideHelpCommand: true,
 		ArgsUsage:       "PATTERN [PATH]",
 		Flags: []cli.Flag{

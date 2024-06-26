@@ -84,9 +84,9 @@ func walk(config *walkerConfig, processor *chan string) error {
 
 	err = fastwalk.Walk(
 		&fastwalk.Config{
-			NumWorkers: fastwalk.DefaultNumWorkers(), 
-			Follow: config.followSymlinks,
-		}, 
+			NumWorkers: fastwalk.DefaultNumWorkers(),
+			Follow:     config.followSymlinks,
+		},
 		config.dir, visit,
 	)
 	close(*processor)
