@@ -50,7 +50,7 @@ func main() {
 			},
 		},
 		Usage:           "a *fast* grep like tool",
-		UsageText:       "gap is a fast grep like tool. It searches the given regex or literal text and searches it recursively in the given directory, while ignoring hidden files and folders, binary files and obeying the gitignore patterns. \ngap pattern [path] {flags}",
+		UsageText:       "gap is a fast grep like tool. It searches the given regex or literal text and searches it recursively in the given directory, while ignoring hidden files and folders, binary files and obeying the gitignore patterns. \n$ gap pattern [path] {flags}",
 		HideHelpCommand: true,
 		ArgsUsage:       "PATTERN [PATH]",
 		Flags: []cli.Flag{
@@ -80,7 +80,7 @@ func main() {
 				Usage:   "Whether to search case-sensitively",
 			},
 			&cli.BoolFlag{
-				Name:  "stats", // todo
+				Name:  "stats",
 				Value: false,
 				Usage: "Show statistics about the search.",
 			},
@@ -95,12 +95,6 @@ func main() {
 				Aliases: []string{"F"},
 				Value:   false,
 				Usage:   "Print paths with zero matches.",
-			},
-			&cli.BoolFlag{
-				Name:    "line-number", // todo
-				Aliases: []string{"n"},
-				Value:   true,
-				Usage:   "Print line numbers where matches occur.",
 			},
 			&cli.BoolFlag{
 				Name:    "no-line-number", // todo
@@ -174,13 +168,25 @@ func main() {
 				processConfig.regex = re
 			}
 
+			filesWithMatches := cCtx.Bool("files-with-matches")
+			filesWithoutMatches := cCtx.Bool("files-without-matches")
+
+			noLineNumber := cCtx.Bool("no-line-number")
+			countStats := cCtx.Bool("stats")
+
+			printConfig := &printerConfig{
+				showLineNumbers: !noLineNumber,
+				countStats: countStats,
+				onlyFiles: filesWithMatches || filesWithoutMatches,
+			}
+
 			processor := make(chan string)
 			resultCh := make(chan *searchResult)
 			var wg sync.WaitGroup
 
 			wg.Add(1)
 			go func() {
-				resultPrinter(&resultCh)
+				resultPrinter(&resultCh, printConfig)
 				wg.Done()
 			}()
 

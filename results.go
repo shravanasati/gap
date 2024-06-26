@@ -33,10 +33,14 @@ func (r *searchResult) Line() string {
 }
 
 // resultPrinter takes a channel of results and prints them.
-func resultPrinter(results *chan *searchResult) {
+func resultPrinter(results *chan *searchResult, config *printerConfig) {
 	// this fileMap is used to temporarily store the file and individual result entries.
 	// all the occurences will be printed once filedone notification is recieved
 	fileMap := map[string][]*searchResult{}
+	stats := map[string]uint{
+		"matched lines":           0,
+		"files contained matches": 0,
+	}
 	for r := range *results {
 		if r.finished {
 			fmt.Println(r.Filename())
@@ -45,8 +49,20 @@ func resultPrinter(results *chan *searchResult) {
 			}
 			fmt.Println()
 			delete(fileMap, r.filename)
+			if config.countStats {
+				stats["files contained matches"]++
+			}
 		} else {
 			fileMap[r.filename] = append(fileMap[r.filename], r)
+			if config.countStats {
+				stats["matched lines"]++
+			}
+		}
+	}
+
+	if config.countStats {
+		for k, v := range stats {
+			fmt.Printf("%v %v\n", v, k)
 		}
 	}
 }
