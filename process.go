@@ -32,11 +32,20 @@ func process(in *chan string, out *chan *searchResult, config *processorConfig) 
 					return config.regex.Match(b)
 				}
 			} else {
-				searchMethod = func(b []byte) bool {
-					return bytes.Contains(b, toSearch)
+				if config.caseSensitive {
+					searchMethod = func(b []byte) bool {
+						return bytes.Contains(b, toSearch)
+					}
+				} else {
+					// for case-insensitive search, convert both search pattern
+					// and the given bytes to lower case
+					toSearch = bytes.ToLower(toSearch)
+					searchMethod = func(b []byte) bool {
+						return bytes.Contains(bytes.ToLower(b), toSearch)
+					}
 				}
-
 			}
+
 			for i, line := range data {
 				if searchMethod(line) {
 					*out <- &searchResult{filename: entry, lineNumber: i + 1, text: string(line), finished: false}

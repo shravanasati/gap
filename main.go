@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/urfave/cli/v2"
@@ -18,14 +19,21 @@ const (
 )
 
 type processorConfig struct {
-	regexEnabled bool
-	pattern      string
-	regex        *regexp.Regexp
+	regexEnabled  bool
+	pattern       string
+	regex         *regexp.Regexp
+	caseSensitive bool
 }
 
 type walkerConfig struct {
 	dir            string
 	followSymlinks bool
+}
+
+type printerConfig struct {
+	showLineNumbers bool
+	onlyFiles       bool
+	countStats      bool
 }
 
 func main() {
@@ -42,7 +50,7 @@ func main() {
 			},
 		},
 		Usage:           "a *fast* grep like tool",
-		UsageText:       "gap is a fast grep like tool. It searches the given regex or literal text and searches it recursively in the given directory, while ignoring hidden files and folders, binary files and obeying the gitignore patterns.",
+		UsageText:       "gap is a fast grep like tool. It searches the given regex or literal text and searches it recursively in the given directory, while ignoring hidden files and folders, binary files and obeying the gitignore patterns. \ngap pattern [path] {flags}",
 		HideHelpCommand: true,
 		ArgsUsage:       "PATTERN [PATH]",
 		Flags: []cli.Flag{
@@ -60,19 +68,13 @@ func main() {
 				Usage:   "Whether the pattern is a regular expression.",
 			},
 			&cli.BoolFlag{
-				Name:    "smart-casing", // todo
-				Aliases: []string{"S"},
-				Value:   true,
-				Usage:   "Whether to use smart-casing. gap will search case-insensitively if all the terms are in lower case. Overrides other case-sensitivity flags.",
-			},
-			&cli.BoolFlag{
-				Name:    "insensitive", // todo
+				Name:    "insensitive",
 				Aliases: []string{"i"},
 				Value:   false,
 				Usage:   "Whether to search case-insensitively",
 			},
 			&cli.BoolFlag{
-				Name:    "sensitive", // todo
+				Name:    "sensitive",
 				Aliases: []string{"c"},
 				Value:   false,
 				Usage:   "Whether to search case-sensitively",
@@ -133,7 +135,7 @@ func main() {
 				dir = "."
 			}
 			walkConfig := &walkerConfig{
-				dir: dir,
+				dir:            dir,
 				followSymlinks: cCtx.Bool("follow"),
 			}
 
@@ -142,7 +144,29 @@ func main() {
 				regexEnabled: regexEnabled,
 				pattern:      searchPattern,
 			}
+			insensitive := cCtx.Bool("insensitive")
+			sensitive := cCtx.Bool("sensitive")
+			if !sensitive && !insensitive {
+				// if no flags are provided, use smart casing
+				if strings.ToLower(searchPattern) == searchPattern {
+					// if the pattern is all lower case, apply case-insensitive search
+					processConfig.caseSensitive = false
+				} else {
+					// otherwise do case-sensitive search
+					processConfig.caseSensitive = true
+				}
+			} else if sensitive {
+				processConfig.caseSensitive = true
+			} else {
+				processConfig.caseSensitive = false
+			}
+
 			if regexEnabled {
+				// if regex is enabled, try compiling the pattern
+				// in regex we can take advantage of the case-insensitive mode
+				if !processConfig.caseSensitive {
+					searchPattern = "(?i)" + searchPattern
+				}
 				re, err := regexp.Compile(searchPattern)
 				if err != nil {
 					return errors.New("unable to compile regex: " + err.Error())
