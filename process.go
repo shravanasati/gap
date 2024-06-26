@@ -18,14 +18,17 @@ func process(in *chan string, out *chan *searchResult, config *processorConfig) 
 	for entry := range *in {
 		wg.Add(1)
 		go func(entry string) {
+			defer wg.Done()
+
 			content, err := ioutil.ReadFile(entry)
 			if err != nil {
 				log.Fatal("unable to read file", err)
 				return
 			}
 
-			data := bytes.Split(content, newLineSep)
 			count := 0
+
+			data := bytes.Split(content, newLineSep)
 			var searchMethod searchCallable
 			if config.regexEnabled {
 				searchMethod = func(b []byte) bool {
@@ -57,15 +60,17 @@ func process(in *chan string, out *chan *searchResult, config *processorConfig) 
 				if searchMethod(line) {
 					*out <- &searchResult{filename: entry, lineNumber: i + 1, text: string(line), finished: false}
 					count++
+					if config.onlyFiles {
+						break
+					}
 				}
 			}
 
 			if count > 0 {
-				// ṇotify that the file is finished reading
+				// notify that the file is finished reading
 				*out <- &searchResult{filename: entry, finished: true}
 			}
 
-			wg.Done()
 		}(entry)
 	}
 

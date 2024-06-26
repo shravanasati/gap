@@ -32,6 +32,10 @@ func (r *searchResult) Line() string {
 	return fmt.Sprintf("%s: %s", yellow(r.lineNumber), green(r.text))
 }
 
+func (r *searchResult) Match() string {
+	return green(r.text)
+}
+
 // resultPrinter takes a channel of results and prints them.
 func resultPrinter(results *chan *searchResult, config *printerConfig) {
 	// this fileMap is used to temporarily store the file and individual result entries.
@@ -43,15 +47,26 @@ func resultPrinter(results *chan *searchResult, config *printerConfig) {
 	}
 	for r := range *results {
 		if r.finished {
-			fmt.Println(r.Filename())
-			for _, v := range fileMap[r.filename] {
-				fmt.Println(v.Line())
-			}
-			fmt.Println()
-			delete(fileMap, r.filename)
 			if config.countStats {
 				stats["files contained matches"]++
 			}
+
+			fmt.Println(r.Filename())
+			if config.onlyFiles {
+				continue
+			}
+
+			for _, v := range fileMap[r.filename] {
+				if config.showLineNumbers {
+					fmt.Println(v.Line())
+				} else {
+					fmt.Println(v.Match())
+				}
+			}
+
+			fmt.Println()
+			delete(fileMap, r.filename)
+
 		} else {
 			fileMap[r.filename] = append(fileMap[r.filename], r)
 			if config.countStats {

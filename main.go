@@ -24,6 +24,7 @@ type processorConfig struct {
 	regex         *regexp.Regexp
 	caseSensitive bool
 	invertMatch   bool
+	onlyFiles     bool
 }
 
 type walkerConfig struct {
@@ -92,19 +93,19 @@ func main() {
 				Usage: "Show statistics about the search.",
 			},
 			&cli.BoolFlag{
-				Name:    "files-with-matches", // todo
+				Name:    "files-with-matches",
 				Aliases: []string{"f"},
 				Value:   false,
 				Usage:   "Print paths with atleast one match.",
 			},
 			&cli.BoolFlag{
-				Name:    "files-without-matches", // todo
+				Name:    "files-without-matches",
 				Aliases: []string{"F"},
 				Value:   false,
 				Usage:   "Print paths with zero matches.",
 			},
 			&cli.BoolFlag{
-				Name:    "no-line-number", // todo
+				Name:    "no-line-number",
 				Aliases: []string{"N"},
 				Value:   false,
 				Usage:   "Don't print line numbers where matches occur.",
@@ -141,11 +142,14 @@ func main() {
 			}
 
 			invertMatch := cCtx.Bool("invert-match")
+			filesWithMatches := cCtx.Bool("files-with-matches")
+			filesWithoutMatches := cCtx.Bool("files-without-matches")
 			regexEnabled := cCtx.Bool("regex")
 			processConfig := &processorConfig{
 				regexEnabled: regexEnabled,
 				pattern:      searchPattern,
-				invertMatch: invertMatch,
+				invertMatch:  invertMatch,
+				onlyFiles:    filesWithMatches || filesWithoutMatches,
 			}
 			insensitive := cCtx.Bool("insensitive")
 			sensitive := cCtx.Bool("sensitive")
@@ -177,9 +181,6 @@ func main() {
 				processConfig.regex = re
 			}
 
-			filesWithMatches := cCtx.Bool("files-with-matches")
-			filesWithoutMatches := cCtx.Bool("files-without-matches")
-
 			noLineNumber := cCtx.Bool("no-line-number")
 			countStats := cCtx.Bool("stats")
 
@@ -187,6 +188,12 @@ func main() {
 				showLineNumbers: !noLineNumber,
 				countStats:      countStats,
 				onlyFiles:       filesWithMatches || filesWithoutMatches,
+			}
+
+			if filesWithoutMatches {
+				// files without matches is essentially printing all the files
+				// where the match is inverted
+				processConfig.invertMatch = true
 			}
 
 			processor := make(chan string)
