@@ -45,7 +45,6 @@ func isBinaryFile(filename string) (bool, error) {
 func walk(config *walkerConfig, processor *chan string) error {
 	matcher, err := gitignore.NewGitignoreMatcher().FromFile("./.gitignore")
 	if err != nil {
-		log.Println("gitignore not found", err)
 		// if there is some error, we can let it pass
 		// but the matcher would be nil
 		// so setting it to a empty matcher
@@ -56,13 +55,15 @@ func walk(config *walkerConfig, processor *chan string) error {
 		return err
 	}
 
+	baseDirLength := len(config.dir) + 1 // +1 for trailing slash
+
 	visit := func(path string, f fs.DirEntry, err error) error {
 		basePath := filepath.Base(path)
 		if f.IsDir() && (basePath == ".git") {
 			return fastwalk.SkipDir
 		}
 
-		ignored, err := matcher.Matches(path)
+		ignored, err := matcher.Matches(path[min(baseDirLength, len(path) - 1):]) // strip the base dir prefix
 		if err == nil && ignored {
 			// no need to have various checks if the file is ignored
 			// if f.IsDir() {

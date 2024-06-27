@@ -9,7 +9,7 @@ func TestIgnore(t *testing.T) {
 		want  bool
 		wantErr bool
 	}{
-		{"./bin/a.exe", true, false},
+		{".\\bin\\a.exe", true, false},
 		{"./a.out", true, false},
 		{"foo", false, false},
 		{"./query/module.py", false, false},

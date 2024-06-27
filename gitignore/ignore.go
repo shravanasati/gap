@@ -16,6 +16,7 @@ type GitignoreMatcher struct {
 
 // Returns a pointer to the [GitignoreMatcher] with no patterns.
 func NewGitignoreMatcher() *GitignoreMatcher {
+	// todo add a base dir component
 	return &GitignoreMatcher{patterns: []string{}}
 }
 
@@ -27,13 +28,22 @@ func (gm *GitignoreMatcher) FromPatterns(patterns []string) *GitignoreMatcher {
 
 // Adds the given patterns to the existing [GitignoreMatcher] by reading from the given reader.
 func (gm *GitignoreMatcher) FromReader(r io.Reader) (*GitignoreMatcher, error) {
-	var buf []byte
-	_, err := r.Read(buf)
-	if err != nil {
-		return nil, err
+	buf := make([]byte, 1024)
+	var builder strings.Builder
+	for {
+		n, err := r.Read(buf)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+		if n == 0 {
+			break
+		}
+		if _, err := builder.Write(buf); err != nil {
+			panic("unable to write to strings.Builder in FromReader: " + err.Error())
+		}
 	}
 
-	stringBuf := string(buf)
+	stringBuf := builder.String()
 	patterns := strings.Split(stringBuf, "\n")
 	gm.patterns = append(gm.patterns, patterns...)
 	return gm, nil
@@ -41,13 +51,15 @@ func (gm *GitignoreMatcher) FromReader(r io.Reader) (*GitignoreMatcher, error) {
 
 // Adds the given patterns to the existing [GitignoreMatcher] by reading from the given file.
 func (gm *GitignoreMatcher) FromFile(filename string) (*GitignoreMatcher, error) {
-	file, err := os.Open(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-
-	return gm.FromReader(file)
+	
+	dataStr := string(data)
+	patterns := strings.Split(dataStr, "\n")
+	gm.patterns = append(gm.patterns, patterns...)
+	return gm, nil
 }
 
 // Build must be called before using the GitignoreMatcher. 
@@ -64,7 +76,7 @@ func (gm *GitignoreMatcher) Build() error {
 // Returns a boolean value indicating whether the given filepath would be ignored, as per the gitignore spec.
 func (gm *GitignoreMatcher) Matches(someFilePath string) (bool, error) {
 	if gm.matcher == nil {
-		panic("Build method not called on GitignoreMatcher")
+		panic("Build method either not called on GitignoreMatcher, or some constructor failed")
 	}
 	return gm.matcher.MatchesOrParentMatches(someFilePath)
 }
