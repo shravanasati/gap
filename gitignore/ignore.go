@@ -5,12 +5,13 @@ import (
 	"os"
 	"strings"
 
-	gitignore "github.com/zabawaba99/go-gitignore"
+	"github.com/moby/patternmatcher"
 )
 
 // Represents a GitignoreMatcher.
 type GitignoreMatcher struct {
 	patterns []string
+	matcher  *patternmatcher.PatternMatcher
 }
 
 // Returns a pointer to the [GitignoreMatcher] with no patterns.
@@ -49,12 +50,21 @@ func (gm *GitignoreMatcher) FromFile(filename string) (*GitignoreMatcher, error)
 	return gm.FromReader(file)
 }
 
-// Returns a boolean value indicating whether the given filepath would be ignored, as per the gitignore spec.
-func (gm *GitignoreMatcher) IsIgnored(someFilePath string) bool {
-	for _, pattern := range gm.patterns {
-		if gitignore.Match(pattern, someFilePath) {
-			return true
-		}
+// Build must be called before using the GitignoreMatcher. 
+// It initializes the [patternmatcher.PatternMatcher] struct with the given patterns.
+func (gm *GitignoreMatcher) Build() error {
+	m, e := patternmatcher.New(gm.patterns)
+	if e != nil {
+		return e
 	}
-	return false
+	gm.matcher = m
+	return nil
+}
+
+// Returns a boolean value indicating whether the given filepath would be ignored, as per the gitignore spec.
+func (gm *GitignoreMatcher) Matches(someFilePath string) (bool, error) {
+	if gm.matcher == nil {
+		panic("Build method not called on GitignoreMatcher")
+	}
+	return gm.matcher.MatchesOrParentMatches(someFilePath)
 }

@@ -51,15 +51,23 @@ func walk(config *walkerConfig, processor *chan string) error {
 		// so setting it to a empty matcher
 		matcher = gitignore.NewGitignoreMatcher()
 	}
+	err = matcher.Build()
+	if err != nil {
+		return err
+	}
 
 	visit := func(path string, f fs.DirEntry, err error) error {
 		basePath := filepath.Base(path)
-		if f.IsDir() && (basePath == ".git" || matcher.IsIgnored(path)) {
+		if f.IsDir() && (basePath == ".git") {
 			return fastwalk.SkipDir
 		}
 
-		if matcher.IsIgnored(path) {
+		ignored, err := matcher.Matches(path)
+		if err == nil && ignored {
 			// no need to have various checks if the file is ignored
+			// if f.IsDir() {
+			// 	return fastwalk.ErrSkipFiles
+			// }
 			return nil
 		}
 
