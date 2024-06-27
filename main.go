@@ -25,6 +25,8 @@ type processorConfig struct {
 	caseSensitive bool
 	invertMatch   bool
 	onlyFiles     bool
+	beforeContext int
+	afterContext int
 }
 
 type walkerConfig struct {
@@ -41,7 +43,6 @@ type printerConfig struct {
 func main() {
 	// todo add ignore matcher
 	// todo read from stdin
-	// todo add match context
 
 	app := &cli.App{
 		Name:    NAME,
@@ -127,6 +128,24 @@ func main() {
 				Aliases: []string{"G"},
 				Usage:   "Glob patterns for files to ignore.",
 			},
+			&cli.UintFlag{
+				Name:    "after-context",
+				Aliases: []string{"A"},
+				Value:   0,
+				Usage:   "Show `NUM` lines after each match.",
+			},
+			&cli.UintFlag{
+				Name:    "before-context",
+				Aliases: []string{"B"},
+				Value:   0,
+				Usage:   "Show `NUM` lines before each match.",
+			},
+			&cli.UintFlag{
+				Name:    "context",
+				Aliases: []string{"C"},
+				Value:   0,
+				Usage:   "Show `NUM` lines before & after each match. Overrides after-context and before-context.",
+			},
 		},
 		Action: func(cCtx *cli.Context) error {
 			searchPattern := cCtx.Args().Get(0)
@@ -145,12 +164,21 @@ func main() {
 			invertMatch := cCtx.Bool("invert-match")
 			filesWithMatches := cCtx.Bool("files-with-matches")
 			filesWithoutMatches := cCtx.Bool("files-without-matches")
+			beforeContext := cCtx.Uint("before-context")
+			afterContext := cCtx.Uint("after-context")
+			context := cCtx.Uint("context")
+			if context != 0 {
+				beforeContext = context
+				afterContext = context
+			}
 			regexEnabled := cCtx.Bool("regex")
 			processConfig := &processorConfig{
 				regexEnabled: regexEnabled,
 				pattern:      searchPattern,
 				invertMatch:  invertMatch,
 				onlyFiles:    filesWithMatches || filesWithoutMatches,
+				beforeContext: int(beforeContext),
+				afterContext: int(afterContext),
 			}
 			insensitive := cCtx.Bool("insensitive")
 			sensitive := cCtx.Bool("sensitive")

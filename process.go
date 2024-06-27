@@ -56,12 +56,48 @@ func process(in *chan string, out *chan *searchResult, config *processorConfig) 
 				}
 			}
 
-			for i, line := range data {
-				if searchMethod(line) {
-					*out <- &searchResult{filename: entry, lineNumber: i + 1, text: string(line), finished: false}
-					count++
-					if config.onlyFiles {
+			if config.onlyFiles {
+				// dont need to worry about sending contextual lines here
+				for i, line := range data {
+					if searchMethod(line) {
+						*out <- &searchResult{filename: entry, lineNumber: i + 1, text: string(line)}
+						count++
 						break
+					}
+				}
+			} else {
+				N := len(data)
+				for i, line := range data {
+					if searchMethod(line) {
+						count++
+
+						// before context
+						for j := max(0, i-config.beforeContext); j < i; j++ {
+							*out <- &searchResult{
+								filename:   entry,
+								lineNumber: j + 1,
+								text:       string(data[j]),
+								contextual: true,
+							}
+						}
+
+						// actual match
+						*out <- &searchResult{
+							filename:   entry,
+							lineNumber: i + 1,
+							text:       string(line),
+							contextual: false,
+						}
+
+						// after context
+						for j := min(N-1, i+1); j < i+config.afterContext+1 && j < N; j++ {
+							*out <- &searchResult{
+								filename:   entry,
+								lineNumber: j + 1,
+								text:       string(data[j]),
+								contextual: true,
+							}
+						}
 					}
 				}
 			}

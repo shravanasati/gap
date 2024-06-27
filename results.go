@@ -10,6 +10,7 @@ import (
 var yellow = color.New(color.FgYellow).SprintFunc()
 var green = color.New(color.FgGreen).SprintFunc()
 var cyan = color.New(color.FgCyan).SprintFunc()
+var purple = color.New(color.FgMagenta).SprintFunc()
 
 // searchResult represents a gap search searchResult.
 type searchResult struct {
@@ -17,22 +18,32 @@ type searchResult struct {
 	lineNumber int
 	text       string
 	finished   bool
+	contextual bool
 }
 
 // result.String() returns a string representation of the result.
-func (r *searchResult) String() string {
-	return fmt.Sprintf("%s \n%s: %s\n\n", cyan(r.filename), yellow(r.lineNumber), green(r.text))
-}
+// func (r *searchResult) String() string {
+// 	return fmt.Sprintf("%s \n%s: %s\n\n", cyan(r.filename), yellow(r.lineNumber), green(r.text))
+// }
 
 func (r *searchResult) Filename() string {
 	return fmt.Sprint(cyan(r.filename))
 }
 
 func (r *searchResult) Line() string {
-	return fmt.Sprintf("%s: %s", yellow(r.lineNumber), green(r.text))
+	var line string
+	if r.contextual {
+		line = purple(r.text)
+	} else {
+		line = green(r.text)
+	}
+	return fmt.Sprintf("%s: %s", yellow(r.lineNumber), line)
 }
 
 func (r *searchResult) Match() string {
+	if r.contextual {
+		return purple(r.text)
+	}
 	return green(r.text)
 }
 
