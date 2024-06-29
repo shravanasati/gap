@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"runtime/pprof"
 	"strings"
 	"sync"
 
@@ -43,6 +44,16 @@ type printerConfig struct {
 func main() {
 	// todo add ignore matcher
 	// todo read from stdin
+	profile, er := os.Create("gap.prof")
+	if er != nil {
+		log.Fatal(er)
+		return
+	}
+	if er = pprof.StartCPUProfile(profile); er != nil {
+		log.Fatal(er)
+		return
+	}
+	defer pprof.StopCPUProfile()
 
 	app := &cli.App{
 		Name:    NAME,
@@ -237,7 +248,7 @@ func main() {
 
 			nProcs := cCtx.Uint("workers")
 			if nProcs == 0 {
-				nProcs = max(uint(runtime.NumCPU())/4, 1)
+				nProcs = uint(runtime.NumCPU()) * 2
 			}
 			// the process waitgroup is only used to orchestrate the processor goroutines
 			var processWg sync.WaitGroup
